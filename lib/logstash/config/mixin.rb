@@ -343,6 +343,14 @@ module LogStash::Config::Mixin
               return false, "Expected number, got #{value.first.inspect}"
             end
             result = value.first.to_i
+          when :float
+            if value.size > 1 # only one value wanted
+              return false, "Expected float, got #{value.inspect}"
+            end
+            if value.first.to_s.to_f.to_s != value.first.to_s
+              return false, "Expected float, got #{value.first.inspect}"
+            end
+            result = value.first.to_f
           when :boolean
             if value.size > 1 # only one value wanted
               return false, "Expected boolean, got #{value.inspect}"
