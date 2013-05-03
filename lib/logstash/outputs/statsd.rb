@@ -48,7 +48,7 @@ class LogStash::Outputs::Statsd < LogStash::Outputs::Base
   config :count, :validate => :hash, :default => {}
 
   # The sample rate for the metric
-  config :sample_rate, :validate => :number, :default => 1
+  config :sample_rate, :validate => :float, :default => 1
 
   # The final metric sent to statsd will look like the following (assuming defaults)
   # logstash.sender.file_name
