@@ -1,5 +1,6 @@
 require "test_utils"
 require "logstash/filters/date"
+require "timecop"
 
 puts "Skipping date performance tests because this ruby is not jruby" if RUBY_ENGINE != "jruby"
 RUBY_ENGINE == "jruby" and describe LogStash::Filters::Date do
@@ -280,6 +281,32 @@ RUBY_ENGINE == "jruby" and describe LogStash::Filters::Date do
 
     sample "Sun Jun 02 20:38:03" do
       insist { subject["@timestamp"].year } == Time.now.year
+    end
+  end
+
+  describe "LOGSTASH-1744 - Default year should be dynamic" do
+    before do
+      Timecop.travel(Time.local(2013, 12, 31, 23, 59, 59))
+    end
+
+    after do
+      Timecop.return
+    end
+
+    config <<-CONFIG
+      filter {
+        date {
+          match => [ "message", "MMM dd HH:mm:ss" ]
+        }
+        sleep {
+          time => 1
+        }
+      }
+    CONFIG
+
+    sample ["Dec 31 23:59:59", "Jan 01 00:00:00"] do
+      insist { subject[0]["@timestamp"].year } == 2013
+      insist { subject[1]["@timestamp"].year } == 2014
     end
   end
 end

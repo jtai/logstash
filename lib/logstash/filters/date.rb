@@ -149,20 +149,20 @@ class LogStash::Filters::Date < LogStash::Filters::Base
           else
             joda_parser = joda_parser.withOffsetParsed
           end
-          parser = lambda { |date| joda_parser.parseMillis(date) }
+          parser = lambda { |date, now| joda_parser.parseMillis(date) }
         when "UNIX" # unix epoch
           joda_instant = org.joda.time.Instant.java_class.constructor(Java::long).method(:new_instance)
           #parser = lambda { |date| joda_instant.call((date.to_f * 1000).to_i).to_java.toDateTime }
-          parser = lambda { |date| (date.to_f * 1000).to_i }
+          parser = lambda { |date, now| (date.to_f * 1000).to_i }
         when "UNIX_MS" # unix epoch in ms
           joda_instant = org.joda.time.Instant.java_class.constructor(Java::long).method(:new_instance)
-          parser = lambda do |date| 
+          parser = lambda do |date, now|
             #return joda_instant.call(date.to_i).to_java.toDateTime
             return date.to_i
           end
         when "TAI64N" # TAI64 with nanoseconds, -10000 accounts for leap seconds
           joda_instant = org.joda.time.Instant.java_class.constructor(Java::long).method(:new_instance)
-          parser = lambda do |date| 
+          parser = lambda do |date, now|
             # Skip leading "@" if it is present (common in tai64n times)
             date = date[1..-1] if date[0, 1] == "@"
             #return joda_instant.call((date[1..15].hex * 1000 - 10000)+(date[16..23].hex/1000000)).to_java.toDateTime 
@@ -178,7 +178,10 @@ class LogStash::Filters::Date < LogStash::Filters::Base
           if (locale != nil)
             joda_parser = joda_parser.withLocale(locale)
           end
-          parser = lambda { |date| joda_parser.parseMillis(date) }
+          parser = lambda do |date, now|
+            joda_parser = joda_parser.withDefaultYear(now.year) unless joda_parser.getDefaultYear() == now.year
+            joda_parser.parseMillis(date)
+          end
       end
 
       @logger.debug("Adding type with date config", :type => @type,
@@ -212,7 +215,7 @@ class LogStash::Filters::Date < LogStash::Filters::Base
           fieldparsers.each do |parserconfig|
             parser = parserconfig[:parser]
             begin
-              epochmillis = parser.call(value)
+              epochmillis = parser.call(value, Time.new)
               success = true
               break # success
             rescue StandardError, JavaException => e
